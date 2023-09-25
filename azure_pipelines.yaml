@@ -1,0 +1,54 @@
+trigger:
+pr:
+  branches:
+    include:
+    - main
+    - release/*
+    exclude:
+    - .gitignore
+
+  stages:
+  - stage: validate
+    jobs:
+    - job: Compliance
+    displayName: 'Run Terrascan to check TF complaince'
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+    - script: |
+        curl --location https://github.com/accurics/terrascan/releases/download/v1.18.1/terrascan_1_18.1_Linux_x86_64.tar.gz --output terrascan.tar.gz
+        tar -xvf terrascan.tar.gz
+        sudo install terrascan /usr/local/bin
+    displayName: "Get tools"
+
+    - script: |
+        terrascan scan -t azure -i terraform
+      workingDirectory: $(System.DefaultWorkingDirectory)/infrastructure/storage-account
+      displayName: 'Run terrascan'
+
+
+
+  - stage: dev
+    dependsOn: validate
+    variables:
+      environment_name: 'dev'
+      backendAzureRmContainerName: tfstate
+      backendAzureRmKey: # Populate
+
+    jobs:
+    - job: Infrastructure
+      displayName: 'Build infrastructure'
+      pool:
+        vmImage: 'ubuntu-latest'
+
+      steps:
+      - task: TerraformInstaller00
+        displayName: 'Install Terraform 1.5.7'
+        inputs:
+          terraformVersion: 1.5.7
+
+      - task:
+      # Insert Terraform runner here
+      # Would usually use either Terraform Cloud, or the native app for Azure DevOps
+      
